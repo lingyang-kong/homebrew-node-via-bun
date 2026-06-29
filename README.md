@@ -41,6 +41,8 @@ brew install --HEAD lingyang-kong/node-via-bun/node
 
 `corepack` is intentionally not provided by this shim.
 
+`node`, `npm`, and `npx` pass through to Bun for all commands; `--version`/`-v` is shimmed to return the version aligned with the resolved Bun/Node release mapping.
+
 ## Local development
 
 To test the formula from a checked out copy:
