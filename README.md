@@ -39,7 +39,7 @@ brew install --HEAD lingyang-kong/node-via-bun/node
 - `npm` -> `bun`
 - `npx` -> `bunx`
 
-`corepack` is intentionally not provided by this shim.
+The formula compiles one BusyBox-style C shim during install and hard-links `node`, `npm`, and `npx` to it.
 
 `node`, `npm`, and `npx` pass through to Bun for all commands; `--version`/`-v` is shimmed to return the version aligned with the resolved Bun/Node release mapping.
 
