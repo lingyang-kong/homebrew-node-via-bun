@@ -1,5 +1,0 @@
-CompileFlags:
-    Add:
-        - -DBUN_PATH="/dev/null"
-        - -DBUNX_PATH="/dev/null"
-        - -DNPM_VERSION_PATH="/dev/null"

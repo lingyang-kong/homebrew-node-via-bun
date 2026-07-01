@@ -3,49 +3,52 @@
 # Node shim formula backed by Bun
 class Node < Formula
   desc "Runs Node.js commands using Bun"
-  homepage "https://bun.sh/"
+  homepage "https://github.com/lingyang-kong/node-via-bun"
+  url "https://github.com/lingyang-kong/node-via-bun/archive/refs/tags/v1.0.0+via-bun1.tar.gz"
+  version "1.0.0+via-bun1"
+  sha256 "cce86967ad403d53ed49c3abb46cb111846ceeea12d6b715d6f63a33bf707513"
   license "MIT"
-  head "https://github.com/lingyang-kong/homebrew-node-via-bun.git", branch: "main"
+
+  head "https://github.com/lingyang-kong/node-via-bun.git", branch: "main"
 
   depends_on "oven-sh/bun/bun"
 
   def install
-    shim_path = libexec / "node-via-bun"
+    multicall_path = libexec / "node-via-bun"
 
     libexec.install buildpath / "src/npm-version.js"
-    compile_shim(libexec / "npm-version.js", shim_path)
-    link_applets(shim_path)
+    (pkgshare / File.dirname(commands_test_path)).install buildpath / commands_test_path
+    compile_multicall_binary(multicall_path)
+    link_applets(multicall_path)
   end
 
-  def compile_shim(npm_version_path, shim_path)
+  def commands_test_path
+    "tests/installed-commands.sh"
+  end
+
+  def compile_multicall_binary(multicall_path)
     bun_opt_bin = formula_opt_bin("oven-sh/bun/bun")
-    cflags = (buildpath / "src/compile_flags.txt").read.lines.map(&:strip).reject(&:empty?)
-    defines = %W[
-      -DBUN_PATH="#{bun_opt_bin}/bun"
-      -DBUNX_PATH="#{bun_opt_bin}/bunx"
-      -DNPM_VERSION_PATH="#{npm_version_path}"
-    ]
+    cflags = (buildpath / "src/cflags.txt").read.lines.map(&:strip).reject(&:empty?)
+    macos_ldflags = %w[-Wl,-dead_strip]
+    defines = {
+      BUN_PATH:         "#{bun_opt_bin}/bun",
+      BUNX_PATH:        "#{bun_opt_bin}/bunx",
+      NPM_VERSION_PATH: "#{libexec}/npm-version.js",
+    }.map { |name, path| %Q(-D#{name}="#{path}") }
 
     system ENV.cc, *cflags, *defines,
-           buildpath / "src/shim.c", "--output", shim_path, "-Wl,-dead_strip"
+           buildpath / "src/node-via-bun.c", "--output", multicall_path, *macos_ldflags
   end
 
-  def link_applets(shim_path)
+  def link_applets(multicall_path)
     bin.mkpath
     %w[node npm npx].each do |name|
-      ln shim_path, bin / name
+      ln multicall_path, bin / name
     end
   end
 
   test do
-    node_version = shell_output("#{bin}/node --print process.version").strip
-    assert_match(/\Av\d+\.\d+\.\d+/, node_version)
-    npm_version = "99.88.77"
-    release_index_url = %Q(data:application/json,[{"version":"#{node_version}","npm":"#{npm_version}"}])
-
-    %w[npm npx].each do |shim|
-      assert_equal "#{npm_version}\n",
-                   shell_output("NODE_RELEASE_INDEX_URL='#{release_index_url}' #{bin / shim} --version")
-    end
+    ENV["NODE_VIA_BUN_EXPECT_NODEJS"] = "0"
+    system pkgshare / commands_test_path, bin
   end
 end

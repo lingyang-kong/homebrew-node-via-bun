@@ -1,7 +1,0 @@
--Oz
--flto
--fno-common
--Wall
--Wextra
--Wsizeof-array-div
--Wsizeof-pointer-div
