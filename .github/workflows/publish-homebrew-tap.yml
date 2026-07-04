@@ -1,0 +1,87 @@
+name: Publish Homebrew Tap
+
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: Source release version without leading v
+        required: true
+        type: string
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: true
+
+env:
+  HOMEBREW_FORMULA: lingyang-kong/node-via-bun/node
+  HOMEBREW_TAP: lingyang-kong/node-via-bun
+  PACKAGE_VERSION: ${{ inputs.release_version }}
+  SOURCE_URL: https://github.com/lingyang-kong/node-via-bun/archive/refs/tags/v${{ inputs.release_version }}.tar.gz
+
+jobs:
+  publish_homebrew_tap:
+    name: Publish Homebrew Tap
+    runs-on: macos-latest
+
+    steps:
+      - name: Unlink conflicting Node formulas
+        run: |
+          brew list --formula --versions | while read -r conflict _; do
+          	case "$conflict" in
+          	node | node@*)
+          		brew unlink "$conflict"
+          		;;
+          	esac
+          done
+        background: true
+
+      - name: Set up Bun Homebrew tap
+        env:
+          BUN_HOMEBREW_TAP: oven-sh/bun
+        run: |
+          brew tap "$BUN_HOMEBREW_TAP"
+          brew trust --formula "$BUN_HOMEBREW_TAP/bun"
+        background: true
+
+      - name: Set up project Homebrew tap
+        run: |
+          brew tap "$HOMEBREW_TAP"
+          brew trust --formula "$HOMEBREW_TAP/node"
+
+          printf 'PROJECT_TAP_DIR=%s\n' \
+          	"$(brew --repo "$HOMEBREW_TAP")" >>"$GITHUB_ENV"
+
+      - name: Bump formula
+        env:
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        working-directory: ${{ env.PROJECT_TAP_DIR }}
+        run: |
+          brew bump-formula-pr \
+          	--write-only \
+          	--commit \
+          	--url "$SOURCE_URL" \
+          	--version "$PACKAGE_VERSION" \
+          	--message "node: update to $PACKAGE_VERSION" \
+          	"$HOMEBREW_FORMULA"
+
+      - wait-all:
+
+      - name: Test formula
+        run: |
+          brew install "$HOMEBREW_FORMULA"
+          brew test "$HOMEBREW_FORMULA"
+
+      - name: Push formula update
+        working-directory: ${{ env.PROJECT_TAP_DIR }}
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git config credential.helper store
+          git credential approve <<-GIT_CREDENTIAL
+          protocol=https
+          host=github.com
+          username=x-access-token
+          password=$HOMEBREW_TAP_TOKEN
+          GIT_CREDENTIAL
+
+          git push origin HEAD:main
