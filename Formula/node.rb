@@ -4,9 +4,9 @@
 class Node < Formula
   desc "Runs Node.js commands using Bun"
   homepage "https://github.com/lingyang-kong/node-via-bun"
-  url "https://github.com/lingyang-kong/node-via-bun/archive/refs/tags/v1.0.0+via-bun1.tar.gz"
-  version "1.0.0+via-bun1"
-  sha256 "cce86967ad403d53ed49c3abb46cb111846ceeea12d6b715d6f63a33bf707513"
+  url "https://github.com/lingyang-kong/node-via-bun/archive/refs/tags/v1.1.0+via-bun2.tar.gz"
+  version "1.1.0+via-bun2"
+  sha256 "ff40c018147327cd4f49e00eabc138cb1dbf569423ff6d6c47c0b916d7ddac68"
   license "MIT"
 
   head "https://github.com/lingyang-kong/node-via-bun.git", branch: "main"
